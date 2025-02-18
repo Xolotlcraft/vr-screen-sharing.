@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Centered Screen Duplication for VR</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: black;
+        }
+
+        /* Container for the VR view */
+        .vr-container {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+        }
+
+        /* Each eye's view */
+        .eye {
+            width: 50vw; /* Half the screen width for each eye */
+            height: 100vh;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Video element for each eye */
+        .eye video {
+            width: 100vw; /* Full screen width */
+            height: 100vh;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+
+        /* Left eye view */
+        .left video {
+            transform: translateX(-25%); /* Shift left to center the middle of the screen */
+        }
+
+        /* Right eye view */
+        .right video {
+            transform: translateX(-25%); /* Shift left to center the middle of the screen */
+        }
+    </style>
+</head>
+<body>
+    <div class="vr-container">
+        <div class="eye left">
+            <video id="left-eye" autoplay></video>
+        </div>
+        <div class="eye right">
+            <video id="right-eye" autoplay></video>
+        </div>
+    </div>
+
+    <script>
+        // Capture the screen
+        async function captureScreen() {
+            try {
+                // Prompt the user to share their screen
+                const stream = await navigator.mediaDevices.getDisplayMedia({
+                    video: true,
+                    audio: true // Set to true if you want audio
+                });
+
+                // Display the screen in both video elements
+                const leftEye = document.getElementById('left-eye');
+                const rightEye = document.getElementById('right-eye');
+                leftEye.srcObject = stream;
+                rightEye.srcObject = stream;
+
+                // Handle when the user stops sharing
+                stream.getVideoTracks()[0].onended = () => {
+                    alert('Screen sharing ended.');
+                };
+            } catch (error) {
+                console.error('Error capturing screen:', error);
+                alert('Failed to capture screen. Please try again.');
+            }
+        }
+
+        // Start screen capture when the page loads
+        captureScreen();
+    </script>
+</body>
+</html>
