@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Centered Screen Duplication for VR</title>
+    <title>Multi-User Screen Sharing</title>
     <style>
         body {
             margin: 0;
@@ -58,34 +58,83 @@
         </div>
     </div>
 
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
-        // Capture the screen
+        // Initialize PeerJS
+        const peer = new Peer({
+            host: '0.peerjs.com', // Use PeerJS's free signaling server
+            port: 443,
+            secure: true,
+            debug: 3
+        });
+
+        let localStream;
+        let currentPeerConnection;
+
+        // Get the user's screen
         async function captureScreen() {
             try {
-                // Prompt the user to share their screen
                 const stream = await navigator.mediaDevices.getDisplayMedia({
                     video: true,
-                    audio: true // Set to true if you want audio
+                    audio: false
                 });
+                localStream = stream;
 
-                // Display the screen in both video elements
+                // Display the screen locally
                 const leftEye = document.getElementById('left-eye');
                 const rightEye = document.getElementById('right-eye');
                 leftEye.srcObject = stream;
                 rightEye.srcObject = stream;
 
-                // Handle when the user stops sharing
-                stream.getVideoTracks()[0].onended = () => {
-                    alert('Screen sharing ended.');
-                };
+                // Share the screen with other users
+                shareScreen(stream);
             } catch (error) {
                 console.error('Error capturing screen:', error);
                 alert('Failed to capture screen. Please try again.');
             }
         }
 
+        // Share the screen with other users
+        function shareScreen(stream) {
+            // Listen for incoming connections
+            peer.on('connection', (conn) => {
+                conn.on('data', (data) => {
+                    if (data.type === 'request-stream') {
+                        // Send the screen stream to the requesting peer
+                        const call = peer.call(data.peerId, stream);
+                        setupCall(call);
+                    }
+                });
+            });
+
+            // Connect to the host peer (if not the host)
+            if (peer.id !== 'host') {
+                const conn = peer.connect('host'); // Connect to the host peer
+                conn.on('open', () => {
+                    conn.send({ type: 'request-stream', peerId: peer.id });
+                });
+            }
+        }
+
+        // Handle incoming calls
+        function setupCall(call) {
+            call.on('stream', (remoteStream) => {
+                // Display the remote screen
+                const leftEye = document.getElementById('left-eye');
+                const rightEye = document.getElementById('right-eye');
+                leftEye.srcObject = remoteStream;
+                rightEye.srcObject = remoteStream;
+            });
+        }
+
         // Start screen capture when the page loads
-        captureScreen();
+        peer.on('open', (id) => {
+            console.log('My peer ID is:', id);
+            if (id === 'host') {
+                // The host captures and shares the screen
+                captureScreen();
+            }
+        });
     </script>
 </body>
 </html>
