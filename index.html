@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multi-User Screen Sharing</title>
+    <title>Room-Based Screen Sharing</title>
     <style>
         body {
             margin: 0;
@@ -60,6 +60,9 @@
 
     <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
     <script>
+        // Room ID (you can make this dynamic or user-defined)
+        const roomId = 'screen-sharing-room';
+
         // Initialize PeerJS
         const peer = new Peer({
             host: '0.peerjs.com', // Use PeerJS's free signaling server
@@ -69,7 +72,7 @@
         });
 
         let localStream;
-        let currentPeerConnection;
+        let hostPeerId;
 
         // Get the user's screen
         async function captureScreen() {
@@ -107,13 +110,11 @@
                 });
             });
 
-            // Connect to the host peer (if not the host)
-            if (peer.id !== 'host') {
-                const conn = peer.connect('host'); // Connect to the host peer
-                conn.on('open', () => {
-                    conn.send({ type: 'request-stream', peerId: peer.id });
-                });
-            }
+            // Notify the room that this user is the host
+            const conn = peer.connect(roomId);
+            conn.on('open', () => {
+                conn.send({ type: 'host', peerId: peer.id });
+            });
         }
 
         // Handle incoming calls
@@ -130,10 +131,26 @@
         // Start screen capture when the page loads
         peer.on('open', (id) => {
             console.log('My peer ID is:', id);
-            if (id === 'host') {
-                // The host captures and shares the screen
-                captureScreen();
-            }
+
+            // Connect to the room
+            const conn = peer.connect(roomId);
+            conn.on('open', () => {
+                conn.on('data', (data) => {
+                    if (data.type === 'host') {
+                        // If a host is already in the room, request the stream
+                        hostPeerId = data.peerId;
+                        const requestConn = peer.connect(hostPeerId);
+                        requestConn.on('open', () => {
+                            requestConn.send({ type: 'request-stream', peerId: peer.id });
+                        });
+                    }
+                });
+
+                // If no host is in the room, this user becomes the host
+                if (!hostPeerId) {
+                    captureScreen();
+                }
+            });
         });
     </script>
 </body>
