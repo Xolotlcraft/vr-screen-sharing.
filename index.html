@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Room-Based Screen Sharing</title>
+    <title>Single-Host Screen Sharing</title>
     <style>
         body {
             margin: 0;
@@ -135,7 +135,7 @@
                     if (data.type === 'host') {
                         // If a host is already in the room, request the stream
                         hostPeerId = data.peerId;
-                        const call = peer.call(hostPeerId, localStream);
+                        const call = peer.call(hostPeerId);
                         setupCall(call);
                     }
                 });
