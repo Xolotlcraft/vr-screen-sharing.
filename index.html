@@ -99,15 +99,11 @@
 
         // Share the screen with other users
         function shareScreen(stream) {
-            // Listen for incoming connections
-            peer.on('connection', (conn) => {
-                conn.on('data', (data) => {
-                    if (data.type === 'request-stream') {
-                        // Send the screen stream to the requesting peer
-                        const call = peer.call(data.peerId, stream);
-                        setupCall(call);
-                    }
-                });
+            // Listen for incoming calls
+            peer.on('call', (call) => {
+                // Answer the call and send the screen stream
+                call.answer(stream);
+                setupCall(call);
             });
 
             // Notify the room that this user is the host
@@ -139,10 +135,8 @@
                     if (data.type === 'host') {
                         // If a host is already in the room, request the stream
                         hostPeerId = data.peerId;
-                        const requestConn = peer.connect(hostPeerId);
-                        requestConn.on('open', () => {
-                            requestConn.send({ type: 'request-stream', peerId: peer.id });
-                        });
+                        const call = peer.call(hostPeerId, localStream);
+                        setupCall(call);
                     }
                 });
 
@@ -151,6 +145,11 @@
                     captureScreen();
                 }
             });
+        });
+
+        // Handle errors
+        peer.on('error', (error) => {
+            console.error('PeerJS error:', error);
         });
     </script>
 </body>
